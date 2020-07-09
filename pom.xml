@@ -48,11 +48,23 @@
 			</exclusions>
 		</dependency>
 
+		<!--<dependency>-->
+			<!--<groupId>com.modoo</groupId>-->
+			<!--<artifactId>common-module</artifactId>-->
+			<!--<version>1.0.0-SNAPSHOT</version>-->
+		<!--</dependency>-->
+
+		<!-- 引入websocket-->
 		<dependency>
-			<groupId>com.modoo</groupId>
-			<artifactId>common-module</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+		</dependency>
+
 
 	</dependencies>
 

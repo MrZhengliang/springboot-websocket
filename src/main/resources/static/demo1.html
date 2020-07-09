@@ -23,7 +23,7 @@
     if('WebSocket' in window){
         var timestamp=new Date().getTime();
         var param = 1;
-        websocket = new WebSocket("ws://127.0.0.1:8888/websocket/"+param);
+        websocket = new WebSocket("ws://127.0.0.1:8888/websocket");
     }else{
         alert("您的浏览器不支持websocket");
     }
@@ -56,7 +56,7 @@
         var msg = document.getElementById('apiText').value;
 
         var request = new XMLHttpRequest();
-        var url = "http://127.0.0.1:8888/demo/" + msg;
+        var url = "http://127.0.0.1:8888/demo/notify/" + msg;
         request.open("GET", url);
         alert(msg);
     }
