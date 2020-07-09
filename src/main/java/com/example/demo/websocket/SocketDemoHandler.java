@@ -86,6 +86,8 @@ public class SocketDemoHandler {
         try {
             if (message.equals("ping")) {
                 session.getBasicRemote().sendText("pong");
+            } else {
+                session.getBasicRemote().sendText(message + ",已收到");
             }
         } catch (IOException e) {
             e.printStackTrace();
