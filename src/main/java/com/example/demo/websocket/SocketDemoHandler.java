@@ -101,7 +101,7 @@ public class SocketDemoHandler {
         this.session.getBasicRemote().sendText(message);
     }
     public void sendNotifyToAll(String message) {
-        log.info("webSocketSet ------------> {}", JSON.toJSONString(connections));
+        log.info("webSocketSet ------------> {}", JSON.toJSONString(message));
         for (SocketDemoHandler item : connections) {
             try {
                 item.sendMessage(JSON.toJSONString(message));
