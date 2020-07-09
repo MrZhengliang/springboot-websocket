@@ -50,12 +50,12 @@
     }
     function send(){
         var msg = document.getElementById('text').value;
+        alert(msg);
         websocket.send(msg);
     }
     function sendApiText(){
         var msg = document.getElementById('apiText').value;
         var url = "http://127.0.0.1:8888/demo/notify/" + msg;
-        alert(msg);
 
         var httpRequest = new XMLHttpRequest();//第一步：建立所需的对象
         httpRequest.open('GET', url, true);//第二步：打开连接  将请求参数写在url中  ps:"./Ptest.php?name=test&nameone=testone"

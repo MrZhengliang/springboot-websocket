@@ -82,7 +82,7 @@ public class SocketDemoHandler {
      */
     @OnMessage
     public void onMessage(String message, Session session) {
-        log.debug("websocket received message:" + message);
+        log.info("websocket received message:" + message);
         try {
             if (message.equals("ping")) {
                 session.getBasicRemote().sendText("pong");
