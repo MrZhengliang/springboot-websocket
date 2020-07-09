@@ -120,6 +120,7 @@ public class SocketDemoHandler {
     @PostConstruct
     public void startCodeOrderHeart(){
         startHeart();
+        System.out.println("启动心跳线程");
     }
 
     /**
@@ -129,12 +130,12 @@ public class SocketDemoHandler {
         // 心跳检测
         CodeOrderHeartThread codeOrderHeartThread = new CodeOrderHeartThread();
         ExecutorService codeOrderHeartExecutorService = Executors.newScheduledThreadPool(1);
-        ((ScheduledExecutorService) codeOrderHeartExecutorService).scheduleAtFixedRate(codeOrderHeartThread, 1, 1, TimeUnit.SECONDS);
+        ((ScheduledExecutorService) codeOrderHeartExecutorService).scheduleAtFixedRate(codeOrderHeartThread, 1, 5, TimeUnit.SECONDS);
 
         // 心跳保持
         KeepHeartThread keepHeart = new KeepHeartThread();
         ExecutorService keepHeartExecutorService = Executors.newScheduledThreadPool(1);
-        ((ScheduledExecutorService) keepHeartExecutorService).scheduleAtFixedRate(keepHeart, 1, 2, TimeUnit.SECONDS);
+        ((ScheduledExecutorService) keepHeartExecutorService).scheduleAtFixedRate(keepHeart, 1, 5, TimeUnit.SECONDS);
     }
 
     /**
