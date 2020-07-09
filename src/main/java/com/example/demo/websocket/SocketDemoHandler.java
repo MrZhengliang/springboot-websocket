@@ -26,7 +26,7 @@ import java.util.concurrent.*;
 @Data
 @Slf4j
 @Component
-@ServerEndpoint(value = "/websocket")
+@ServerEndpoint(value = "/websocket/{param}")
 public class SocketDemoHandler {
     /**
      * socket链接集合
