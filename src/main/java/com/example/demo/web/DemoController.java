@@ -22,7 +22,7 @@ public class DemoController {
     @RequestMapping(value = "/demo/notify/{message}", method = {RequestMethod.GET} )
     public String sendNotify(@PathVariable String message) {
         socketDemoHandler.sendNotifyToAll(message);
-        System.out.println(message);
+        System.out.println("api接收到信息" + message);
         return "success";
     }
 
