@@ -43,7 +43,7 @@
         clos();
     }
     function setMessageInHtml(message){
-        document.getElementById('message').innerHTML += "收到的消息:" + message + "\n";
+        document.getElementById('message').innerHTML += "收到的消息:" + message + "<br/>" ;
     }
     function clos(){
         websocket.close(3000,"强制关闭");
