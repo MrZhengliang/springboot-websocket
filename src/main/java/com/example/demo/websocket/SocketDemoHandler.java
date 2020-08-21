@@ -135,7 +135,7 @@ public class SocketDemoHandler {
         // 心跳保持
         KeepHeartThread keepHeart = new KeepHeartThread();
         ExecutorService keepHeartExecutorService = Executors.newScheduledThreadPool(1);
-        ((ScheduledExecutorService) keepHeartExecutorService).scheduleAtFixedRate(keepHeart, 1, 5, TimeUnit.SECONDS);
+        ((ScheduledExecutorService) keepHeartExecutorService).scheduleAtFixedRate(keepHeart, 1, 2, TimeUnit.SECONDS);
     }
 
     /**
@@ -162,12 +162,31 @@ public class SocketDemoHandler {
             heartJson.put("timeStamp", getTimeInMillis());
             try {
                 log.debug("发送心跳包当前人数为:" + connections.size() + "当前时间:" + DateUtil.formatDate2YYYYMMDDHHMISS(DateUtil.fullFormatNow()));
-                sendMessage(heartJson.toString());
+                sendPing(heartJson.toString());
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
+    }
+
+    /**
+     * 发送心跳包
+     *
+     * @param message
+     * @throws IOException
+     */
+    public synchronized void sendPing(String message) throws IOException {
+        if (connections.size() <= 0) {
+            return;
+        }
+        for (SocketDemoHandler socketDemoHandler : connections) {
+            synchronized (socketDemoHandler) {
+                socketDemoHandler.setHeart(false);
+                log.debug("发心跳:{}", socketDemoHandler.toString() + ",当前时间:" + DateUtil.formatDate2YYYYMMDDHHMISS(DateUtil.fullFormatNow()));
+                ((Session) socketDemoHandler.getSession()).getBasicRemote().sendText(message);
+            }
+        }
     }
 
     /**
