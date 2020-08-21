@@ -89,6 +89,13 @@ public class SocketDemoHandler {
         if(!exists){
             connections.add(demoSessionRequest);
             log.debug("------------ 欢迎id = {} 成功加入 --------------", demoSessionRequest.getSessionId());
+
+            // 连接成功 发消息
+//            try {
+//                sendMessage("hhhhhhhhhhhhhhh",session);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
         }
     }
     /**
@@ -119,8 +126,9 @@ public class SocketDemoHandler {
      * @param message
      * @throws IOException
      */
-    public void sendMessage(String message) throws IOException {
-        this.session.getBasicRemote().sendText(message);
+    public void sendMessage(String message,Session session) throws IOException {
+        DemoSessionRequest currentSession = getDemoSessionRequest(session,connections);
+        currentSession.getSession().getBasicRemote().sendText(message);
     }
 
 
