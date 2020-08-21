@@ -2,21 +2,21 @@ package com.example.demo.websocket;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.example.demo.pojo.DemoSessionRequest;
 import com.example.demo.util.DateUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
-import javax.websocket.OnClose;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-import javax.websocket.Session;
+import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.Set;
 import java.util.concurrent.*;
 
 /**
@@ -31,7 +31,10 @@ public class SocketDemoHandler {
     /**
      * socket链接集合
      */
-    private static CopyOnWriteArraySet<SocketDemoHandler> connections = new CopyOnWriteArraySet<>();
+    private static CopyOnWriteArraySet<SocketDemoHandler> webSocketSet = new CopyOnWriteArraySet<>();
+
+
+    private static final Set<DemoSessionRequest> connections = new CopyOnWriteArraySet<DemoSessionRequest>();
 
     private Session session;
 
@@ -53,8 +56,14 @@ public class SocketDemoHandler {
 
     @OnClose
     public void onClose(Session session) {
-        //从set中删除
-        connections.remove(session);
+        DemoSessionRequest demoSessionRequest = null;
+        for (DemoSessionRequest connection : connections) {
+            if (connection.getSession().getId().equals(session.getId())) {
+                demoSessionRequest = connection;
+            }
+        }
+        log.debug("连接关闭:{}",demoSessionRequest.toString());
+        connections.remove(demoSessionRequest);
     }
 
     /**
@@ -65,14 +74,24 @@ public class SocketDemoHandler {
     @OnOpen
     public void onOpen(@PathParam("param") String param, Session session) {
         log.debug("建立websocket连接开始，传入参数 -----------> {}", param);
-        if (ObjectUtils.isEmpty(param)) {
-            log.error("参数异常");
-            return;
+        DemoSessionRequest demoSessionRequest = new DemoSessionRequest();
+        demoSessionRequest.setSession(session);
+        demoSessionRequest.setSessionId(session.getId());
+        demoSessionRequest.setLoseHeartCounter(0);
+        // 是否存在
+        boolean exists = false;
+        for (DemoSessionRequest connection : connections) {
+            if(connection.getSessionId().equals(demoSessionRequest.getSession().getId())){
+                // 已存在
+                exists = true;
+                break;
+            }
         }
-        this.session = session;
-        log.debug("------------ 欢迎id = {} 成功加入 --------------", session.getId());
-        //测试
-        connections.add(this);
+        // 不存在，新增连接
+        if(!exists){
+            connections.add(demoSessionRequest);
+            log.debug("------------ 欢迎id = {} 成功加入 --------------", demoSessionRequest.getSessionId());
+        }
     }
     /**
      * 收到客户端消息后调用的方法
@@ -84,10 +103,13 @@ public class SocketDemoHandler {
     public void onMessage(String message, Session session) {
         log.info("websocket received message:" + message);
         try {
+            // 获取session对应的request
+            DemoSessionRequest currentSession = getDemoSessionRequest(session,connections);
+
             if (message.equals("ping")) {
                 session.getBasicRemote().sendText("pong");
             } else {
-                session.getBasicRemote().sendText(message + ",已收到");
+                currentSession.getSession().getBasicRemote().sendText(message + ",已收到");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -102,16 +124,27 @@ public class SocketDemoHandler {
     public void sendMessage(String message) throws IOException {
         this.session.getBasicRemote().sendText(message);
     }
+
+
     public void sendNotifyToAll(String message) {
         log.info("webSocketSet ------------> {}", JSON.toJSONString(message));
-        for (SocketDemoHandler item : connections) {
+        for (DemoSessionRequest item : connections) {
             try {
-                item.sendMessage(JSON.toJSONString(message));
+                item.getSession().getBasicRemote().sendText(JSON.toJSONString(message));
                 log.info("发送内容 -------------> {}", JSON.toJSONString(message));
             } catch (IOException e) {
                 continue;
             }
         }
+    }
+
+    /**
+     * @Description: 链接错误执行
+     */
+    @OnError
+    public synchronized void onError(@PathParam("commandCode") String commandCode, Session session, Throwable error) {
+        log.debug(commandCode + ":发生了错误");
+        error.printStackTrace();
     }
 
     /**
@@ -151,6 +184,23 @@ public class SocketDemoHandler {
     }
 
     /**
+     * 获取已经创建的连接
+     *
+     * @param session
+     * @return
+     */
+    public DemoSessionRequest getDemoSessionRequest(Session session,Set<DemoSessionRequest> connections) {
+        DemoSessionRequest demoSessionRequest = null;
+        for (DemoSessionRequest connection : connections) {
+            if (session.getId().equals(connection.getSession().getId())) {
+                demoSessionRequest = connection;
+                break;
+            }
+        }
+        return demoSessionRequest;
+    }
+
+    /**
      * @description server发送心跳包 2秒一次
      */
     private class KeepHeartThread implements Runnable {
@@ -180,11 +230,11 @@ public class SocketDemoHandler {
         if (connections.size() <= 0) {
             return;
         }
-        for (SocketDemoHandler socketDemoHandler : connections) {
-            synchronized (socketDemoHandler) {
-                socketDemoHandler.setHeart(false);
-                log.debug("发心跳:{}", socketDemoHandler.toString() + ",当前时间:" + DateUtil.formatDate2YYYYMMDDHHMISS(DateUtil.fullFormatNow()));
-                ((Session) socketDemoHandler.getSession()).getBasicRemote().sendText(message);
+        for (DemoSessionRequest demoSessionRequest : connections) {
+            synchronized (demoSessionRequest) {
+                demoSessionRequest.setHeart(false);
+                log.debug("发心跳:{}", demoSessionRequest.toString() + ",当前时间:" + DateUtil.formatDate2YYYYMMDDHHMISS(DateUtil.fullFormatNow()));
+                ((Session) demoSessionRequest.getSession()).getBasicRemote().sendText(message);
             }
         }
     }
@@ -199,20 +249,20 @@ public class SocketDemoHandler {
             try {
                 // 服务器当前时间戳
                 long currentTimeMillis = getTimeInMillis();
-                for (SocketDemoHandler socketDemoHandler : connections) {
-                    long intervalTime = currentTimeMillis - socketDemoHandler.getTimeStamp();
+                for (DemoSessionRequest demoSessionRequest : connections) {
+                    long intervalTime = currentTimeMillis - demoSessionRequest.getTimeStamp();
 //                    logger.debug("intervalTime:{},allow:{}", intervalTime, ALLOW_ALIVE_TIME);
                     // 客户端心跳未开启，时间戳非0，当前时间戳和上次ping时间戳大于允许的空闲时间
-                    if (!socketDemoHandler.isHeart() && socketDemoHandler.getTimeStamp() != 0 && intervalTime > ALLOW_ALIVE_TIME) {
-                        int loseHeartCounter = socketDemoHandler.getLoseHeartCounter();
+                    if (!demoSessionRequest.isHeart() && demoSessionRequest.getTimeStamp() != 0 && intervalTime > ALLOW_ALIVE_TIME) {
+                        int loseHeartCounter = demoSessionRequest.getLoseHeartCounter();
                         loseHeartCounter++;
-                        socketDemoHandler.setLoseHeartCounter(loseHeartCounter);
-                        log.debug(socketDemoHandler.getSession().getId() + "- 心跳丢失次数: " + socketDemoHandler.getLoseHeartCounter());
+                        demoSessionRequest.setLoseHeartCounter(loseHeartCounter);
+                        log.debug(demoSessionRequest.getSession().getId() + "- 心跳丢失次数: " + demoSessionRequest.getLoseHeartCounter());
                     }
 
-                    if (socketDemoHandler.getLoseHeartCounter() > MAX_LOSE_HEART_COUNT) {
-                        log.debug(socketDemoHandler.getSession().getId() + "- 挂了");
-                        onClose(socketDemoHandler.getSession());
+                    if (demoSessionRequest.getLoseHeartCounter() > MAX_LOSE_HEART_COUNT) {
+                        log.debug(demoSessionRequest.getSession().getId() + "- 挂了");
+                        onClose(demoSessionRequest.getSession());
                     }
                 }
             } catch (Exception e) {
